@@ -6,6 +6,7 @@
 #include <map>
 #include <algorithm>
 #include <vector>
+#include <assert.h>
 
 using namespace std;
 
@@ -39,7 +40,7 @@ typedef map<positions_ranges, positions_expectancy > map_ranges_equity;
  *
  */
 
-Scenario string_to_scenario(string str);
+Scenario string_to_scenario(string& str);
 double get_scenario_probability(map_scenario_probability & map, int co_range, int de_range, int sb_range, int bb_range, Scenario scenario);
 string split_string(string & str, string & delimiter, int index);
 
@@ -82,34 +83,87 @@ int main() {
     map_ranges_equity ranges_equity = read_ranges_equity_file();
     map_scenario_probability scenario_probability = read_scenario_probability_file();
 
-    int index=0;
+    vector<int> co_range{25,30,35};
+
+    vector<int> de_range{25,30,35};
+    vector<int> de_co_range{5,10,15};
+
+    vector<int> sb_range{50,60,70};
+    vector<int> sb_co_range{10,15,20};
+    vector<int> sb_de_range{10,15,20};
+    vector<int> sb_co_de_range{5,10,15};
+
+    vector<int> bb_co_range{10,15,20};
+    vector<int> bb_de_range{10,15,20};
+    vector<int> bb_sb_range{35,40,45};
+    vector<int> bb_co_de_range{10,15,20};
+    vector<int> bb_co_sb_range{10,15,20};
+    vector<int> bb_de_sb_range{10,15,20};
+    vector<int> bb_co_de_sb_range{10,15,20};
+
+    unsigned int index=0;
+    unsigned int total_iter = co_range.size() * de_range.size() * de_co_range.size() * sb_range.size() * sb_co_range.size() *
+            sb_de_range.size() * sb_co_de_range.size() * bb_co_range.size() * bb_de_range.size() * bb_sb_range.size() *
+            bb_co_de_range.size() * bb_co_sb_range.size() * bb_de_sb_range.size() * bb_co_de_sb_range.size();
+
+
     cout << "Sanity Check:.." << endl;
-    for(int co=0; co<=50;co+=5){
-        for(int de=0; de<=50;de+=5){
-            for(int sb=0; sb<50;sb+=5){
-                for(int bb=0; bb<50;bb+=5){
-                    positions_expectancy e = calc_iteration_value(2.0, 0.25, 0.1,
-                                                  co, de, sb, de, sb, sb, bb, bb, bb, sb, bb, bb, bb, bb,
-                                                  ranges_equity, scenario_probability);
+    for(auto co_iter : co_range){
+        /*
+         * */
+        for(auto de_iter : de_range) {
+            for (auto de_co_iter : de_co_range) {
+                /*
+                * */
+                for (auto sb_iter : sb_range) {
+                    for (auto sb_co_iter : sb_co_range) {
+                        for (auto sb_de_iter : sb_de_range) {
+                            for (auto sb_co_de_iter : sb_co_de_range) {
+                                /*
+                                * */
+                                for (auto bb_co_iter : bb_co_range) {
+                                    for (auto bb_de_iter : bb_de_range) {
+                                        for (auto bb_sb_iter : bb_sb_range) {
+                                            for (auto bb_co_de_iter : bb_co_de_range) {
+                                                for (auto bb_co_sb_iter : bb_co_sb_range) {
+                                                    for (auto bb_de_sb_iter : bb_de_sb_range) {
+                                                        for (auto bb_co_de_sb_iter : bb_co_de_sb_range) {
+                                                            /*
+                                                            * */
+                                                            positions_expectancy e =
+                                                                    calc_iteration_value(2.0, 0.25, 0.1,
+                                                                            co_iter, de_iter, sb_iter, de_co_iter, sb_co_iter, sb_co_de_iter,
+                                                                            bb_co_iter, bb_de_iter, bb_sb_iter, sb_co_de_iter, bb_co_de_iter, bb_co_sb_iter, bb_de_sb_iter, bb_co_de_sb_iter,
+                                                                              ranges_equity, scenario_probability);
 
-                    //cout << "CO: " << co << ", DE: " << de << ", SB: " << sb << ", BB: " << bb << endl;
-                    index ++;
-                    if(index % 146 == 0){
-                        cout << "=" ;
+                                                            //cout << e[0] << ", " << e[1] << ", " << e[2] << ", " << e[3] << endl;
+
+                                                            index ++;
+
+                                                            if(index % (total_iter/100 + !(total_iter/100)) == 0){
+                                                                cout << "=" ;
+                                                            }
+                                                            /*if(index > 10){
+                                                                return 0;
+                                                            }*/
+
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
-
                 }
             }
         }
-
     }
-    cout << endl;
 
-    cout << "A";
 
-    positions_expectancy e = calc_iteration_value(2.0, 0.25, 0.1,
-            25, 30, 60, 10, 15, 15, 30, 30, 40, 5, 10, 10, 10, 20,
-                                                  ranges_equity, scenario_probability);
+
 
     /* Test data files
     positions_expectancy e = get_ranges_equity(ranges_equity, 50,5,25,10);
@@ -146,7 +200,7 @@ string split_string(string & str, string & delimiter, int index){
     return str.substr(last_match_index, final_int-last_match_index);
 }
 
-Scenario string_to_scenario(string str){
+Scenario string_to_scenario(string & str){
     if(str == "empty_bigblind"){
         return empty_bigblind;
     }else if(str == "oneraise_cutoff"){
@@ -331,81 +385,186 @@ positions_expectancy calc_iteration_value(double AllIn, double Bb, double Sb,
               int bb_co_sb_range, int bb_de_sb_range, int bb_co_de_sb_range,
               map_ranges_equity& ranges_equity_map, map_scenario_probability& scenario_probability_map) {
 
-    double co_value =
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, 0, empty_bigblind) * 1 * 0 +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_range, oneraise_cutoff) * 1 * (Sb + Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_range, oneraise_dealer) * 1 * 0 +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, bb_sb_range, oneraise_smallblind) * 1 * 0 +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_range, tworaises_cutoff_dealer) * (1/100) * get_ranges_equity(ranges_equity_map, 0,0,co_range,de_co_range)[2] * (2*AllIn + Sb + Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_sb_range, tworaises_cutoff_smallblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,0,co_range,sb_co_range)[2] * (2*AllIn + Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_range, tworaises_cutoff_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,0,co_range,bb_co_range)[2] * (2*AllIn + Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_sb_range, tworaises_dealer_smallblind) * 1 * 0 +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_range, tworaises_dealer_bigblind) * 1 * 0 +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, bb_sb_range, tworaises_smallblind_bigblind) * 1 * 0 +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_sb_range, threeraises_cutoff_dealer_smallblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,co_range,de_co_range,sb_co_de_range)[1] * (3*AllIn + Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_range, bb_co_de_range, threeraises_cutoff_dealer_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,co_range,de_co_range,bb_co_de_range)[1] * (3*AllIn + Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_sb_range, threeraises_cutoff_smallblind_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,co_range,sb_co_range,bb_co_sb_range)[1] * (3*AllIn) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_sb_range, threeraises_dealer_smallblind_bigblind) * 1 * 0 +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_sb_range, fourraises_cutoff_dealer_smallblind_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, co_range,de_co_range,sb_co_de_range,bb_co_de_sb_range)[0] * (4*AllIn);
+    double  probability_empty_bigblind = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, 0, empty_bigblind),
+            probability_oneraise_cutoff = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_range, oneraise_cutoff),
+            probability_probability_oneraise_dealer = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_range, oneraise_dealer),
+            probability_oneraise_smallblind = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, bb_sb_range, oneraise_smallblind),
+            probability_tworaises_cutoff_dealer = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_range, tworaises_cutoff_dealer),
+            probability_tworaises_cutoff_smallblind = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_sb_range, tworaises_cutoff_smallblind),
+            probability_tworaises_cutoff_bigblind = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_range, tworaises_cutoff_bigblind),
+            probability_tworaises_dealer_smallblind = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_sb_range, tworaises_dealer_smallblind),
+            probability_tworaises_dealer_bigblind = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_range, tworaises_dealer_bigblind),
+            probability_probability_tworaises_smallblind_bigblind = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, bb_sb_range, tworaises_smallblind_bigblind),
+            probability_threeraises_cutoff_dealer_smallblind = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_sb_range, threeraises_cutoff_dealer_smallblind),
+            probability_threeraises_cutoff_dealer_bigblind = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_range, threeraises_cutoff_dealer_bigblind),
+            probability_threeraises_cutoff_smallblind_bigblind = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_sb_range, threeraises_cutoff_smallblind_bigblind),
+            probability_threeraises_dealer_smallblind_bigblind = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_sb_range, threeraises_dealer_smallblind_bigblind),
+            probability_fourraises_cutoff_dealer_smallblind_bigblind = (0.01) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_sb_range, fourraises_cutoff_dealer_smallblind_bigblind);
 
+    if(abs(probability_empty_bigblind + probability_oneraise_cutoff + probability_probability_oneraise_dealer + probability_oneraise_smallblind
+       +probability_tworaises_cutoff_dealer + probability_tworaises_cutoff_smallblind + probability_tworaises_cutoff_bigblind + probability_tworaises_dealer_smallblind
+       + probability_tworaises_dealer_bigblind + probability_probability_tworaises_smallblind_bigblind + probability_threeraises_cutoff_dealer_smallblind +
+       probability_threeraises_cutoff_dealer_bigblind + probability_threeraises_cutoff_smallblind_bigblind + probability_threeraises_dealer_smallblind_bigblind+
+       probability_fourraises_cutoff_dealer_smallblind_bigblind - 1.0) > 0.002)
+    {
+        cout << "-E- Scenario probability too divergent, total value: " ;
+        cout << (probability_empty_bigblind + probability_oneraise_cutoff + probability_probability_oneraise_dealer + probability_oneraise_smallblind
+                 +probability_tworaises_cutoff_dealer + probability_tworaises_cutoff_smallblind + probability_tworaises_cutoff_bigblind + probability_tworaises_dealer_smallblind
+                 + probability_tworaises_dealer_bigblind + probability_probability_tworaises_smallblind_bigblind + probability_threeraises_cutoff_dealer_smallblind +
+                 probability_threeraises_cutoff_dealer_bigblind + probability_threeraises_cutoff_smallblind_bigblind + probability_threeraises_dealer_smallblind_bigblind+
+                 probability_fourraises_cutoff_dealer_smallblind_bigblind ) << endl;
+        throw exception();
+    }
+
+    vector<double > co_VS_de_equity = get_ranges_equity(ranges_equity_map, 0,0,co_range,de_co_range),
+                    co_VS_sb_equity = get_ranges_equity(ranges_equity_map, 0,0,co_range,sb_co_range),
+                    co_VS_bb_equity = get_ranges_equity(ranges_equity_map, 0,0,co_range,bb_co_range),
+                    de_VS_sb_equity = get_ranges_equity(ranges_equity_map, 0,0,de_range,sb_de_range),
+                    de_VS_bb_equity = get_ranges_equity(ranges_equity_map, 0,0,de_range,bb_de_range),
+                    sb_VS_bb_equity = get_ranges_equity(ranges_equity_map, 0,0,sb_range,bb_sb_range),
+                    co_VS_de_VS_sb_equity = get_ranges_equity(ranges_equity_map, 0,co_range,de_co_range,sb_co_de_range),
+                    co_VS_de_VS_bb_equity = get_ranges_equity(ranges_equity_map, 0,co_range,de_co_range,bb_co_de_range),
+                    co_VS_sb_VS_bb_equity = get_ranges_equity(ranges_equity_map, 0,co_range,sb_co_range,bb_co_sb_range),
+                    de_VS_sb_VS_bb_equity = get_ranges_equity(ranges_equity_map, 0,de_range,sb_de_range,bb_de_sb_range),
+                    co_VS_de_VS_sb_VS_bb_equity = get_ranges_equity(ranges_equity_map, co_range,de_co_range,sb_co_de_range,bb_co_de_sb_range);
+
+
+    double equity_error = 0.2;
+    if( abs(co_VS_de_equity[2] + co_VS_de_equity[3] - 100) > equity_error ){
+        cout << "-E- co_VS_de_equity too divergent, total value: " ;
+        cout << co_VS_de_equity[0] + co_VS_de_equity[1] + co_VS_de_equity[2] + co_VS_de_equity[3] << endl;
+        throw exception();
+    }
+    if( abs(co_VS_sb_equity[2] + co_VS_sb_equity[3] - 100) > equity_error ){
+        cout << "-E- co_VS_sb_equity too divergent, total value: " ;
+        cout << co_VS_sb_equity[0] + co_VS_sb_equity[1] + co_VS_sb_equity[2] + co_VS_sb_equity[3] << endl;
+        throw exception();
+    }
+    if( abs(co_VS_bb_equity[2] + co_VS_bb_equity[3] - 100) > equity_error ){
+        cout << "-E- co_VS_bb_equity too divergent, total value: " ;
+        cout << co_VS_bb_equity[0] + co_VS_bb_equity[1] + co_VS_bb_equity[2] + co_VS_bb_equity[3] << endl;
+        throw exception();
+    }
+    if( abs(de_VS_sb_equity[2] + de_VS_sb_equity[3] - 100) > equity_error ){
+        cout << "-E- de_VS_sb_equity too divergent, total value: " ;
+        cout << de_VS_sb_equity[0] + de_VS_sb_equity[1] + de_VS_sb_equity[2] + de_VS_sb_equity[3] << endl;
+        throw exception();
+    }
+    if( abs(de_VS_bb_equity[2] + de_VS_bb_equity[3] - 100) > equity_error ){
+        cout << "-E- de_VS_bb_equity too divergent, total value: " ;
+        cout << de_VS_bb_equity[0] + de_VS_bb_equity[1] + de_VS_bb_equity[2] + de_VS_bb_equity[3] << endl;
+        throw exception();
+    }
+    if( abs(sb_VS_bb_equity[2] + sb_VS_bb_equity[3] - 100) > equity_error ){
+        cout << "-E- sb_VS_bb_equity too divergent, total value: " ;
+        cout << sb_VS_bb_equity[0] + sb_VS_bb_equity[1] + sb_VS_bb_equity[2] + sb_VS_bb_equity[3] << endl;
+        throw exception();
+    }
+    if( abs(co_VS_de_VS_sb_equity[1] + co_VS_de_VS_sb_equity[2] + co_VS_de_VS_sb_equity[3] - 100) > equity_error ){
+        cout << "-E- co_VS_de_VS_sb_equity too divergent, total value: " ;
+        cout << co_VS_de_VS_sb_equity[0] + co_VS_de_VS_sb_equity[1] + co_VS_de_VS_sb_equity[2] + co_VS_de_VS_sb_equity[3] << endl;
+        throw exception();
+    }
+    if( abs(co_VS_de_VS_bb_equity[1] + co_VS_de_VS_bb_equity[2] + co_VS_de_VS_bb_equity[3] - 100) > equity_error ){
+        cout << "-E- co_VS_de_VS_bb_equity too divergent, total value: " ;
+        cout << co_VS_de_VS_bb_equity[0] + co_VS_de_VS_bb_equity[1] + co_VS_de_VS_bb_equity[2] + co_VS_de_VS_bb_equity[3] << endl;
+        throw exception();
+    }
+    if( abs(co_VS_sb_VS_bb_equity[1] + co_VS_sb_VS_bb_equity[2] + co_VS_sb_VS_bb_equity[3] - 100) > equity_error ){
+        cout << "-E- co_VS_sb_VS_bb_equity too divergent, total value: " ;
+        cout << co_VS_sb_VS_bb_equity[0] + co_VS_sb_VS_bb_equity[1] + co_VS_sb_VS_bb_equity[2] + co_VS_sb_VS_bb_equity[3] << endl;
+        throw exception();
+    }
+    if( abs(de_VS_sb_VS_bb_equity[1] + de_VS_sb_VS_bb_equity[2] + de_VS_sb_VS_bb_equity[3]-100) > equity_error ){
+        cout << "-E- de_VS_sb_VS_bb_equity too divergent, total value: " ;
+        cout << de_VS_sb_VS_bb_equity[0] + de_VS_sb_VS_bb_equity[1] + de_VS_sb_VS_bb_equity[2] + de_VS_sb_VS_bb_equity[3] << endl;
+        throw exception();
+    }
+    if( abs(co_VS_de_VS_sb_VS_bb_equity[0] + co_VS_de_VS_sb_VS_bb_equity[1] + co_VS_de_VS_sb_VS_bb_equity[2] + co_VS_de_VS_sb_VS_bb_equity[3] - 100) > equity_error ) {
+        cout << "-E- co_VS_de_VS_sb_VS_bb_equity too divergent, total value: " ;
+        cout << co_VS_de_VS_sb_VS_bb_equity[0] + co_VS_de_VS_sb_VS_bb_equity[1] + co_VS_de_VS_sb_VS_bb_equity[2] + co_VS_de_VS_sb_VS_bb_equity[3] << endl;
+        throw exception();
+    }
+
+
+    double co_value =
+            probability_empty_bigblind                               * 1                                       * 0                   +
+            probability_oneraise_cutoff                              * 1                                       * (Sb + Bb)           +
+            probability_probability_oneraise_dealer                  * 1                                       * 0                   +
+            probability_oneraise_smallblind                          * 1                                       * 0                   +
+            probability_tworaises_cutoff_dealer                      * ((0.01) * co_VS_de_equity[2]             * (2*AllIn + Sb + Bb) - AllIn) +
+            probability_tworaises_cutoff_smallblind                  * ((0.01) * co_VS_sb_equity[2]             * (2*AllIn + Bb) - AllIn)      +
+            probability_tworaises_cutoff_bigblind                    * ((0.01) * co_VS_bb_equity[2]             * (2*AllIn + Sb) - AllIn)      +
+            probability_tworaises_dealer_smallblind                  * 1                                       * 0                   +
+            probability_tworaises_dealer_bigblind                    * 1                                       * 0                   +
+            probability_probability_tworaises_smallblind_bigblind    * 1                                       * 0                   +
+            probability_threeraises_cutoff_dealer_smallblind         * ((0.01) * co_VS_de_VS_sb_equity[1]       * (3*AllIn + Bb) - AllIn)      +
+            probability_threeraises_cutoff_dealer_bigblind           * ((0.01) * co_VS_de_VS_bb_equity[1]       * (3*AllIn + Sb) - AllIn)     +
+            probability_threeraises_cutoff_smallblind_bigblind       * ((0.01) * co_VS_sb_VS_bb_equity[1]       * (3*AllIn) - AllIn)          +
+            probability_threeraises_dealer_smallblind_bigblind       * 1                                       * 0                   +
+            probability_fourraises_cutoff_dealer_smallblind_bigblind * ((0.01) * co_VS_de_VS_sb_VS_bb_equity[0] * (4*AllIn) - AllIn);
 
     double de_value =
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, 0, empty_bigblind) * 1 * 0 +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_range, oneraise_cutoff) * 1 * 0 +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_range, oneraise_dealer) * 1 * (Sb + Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, bb_sb_range, oneraise_smallblind) * 1 * 0 +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_range, tworaises_cutoff_dealer) * (1/100) * get_ranges_equity(ranges_equity_map, 0,0,co_range,de_co_range)[3] * (2*AllIn + Sb + Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_sb_range, tworaises_cutoff_smallblind) * 1 * 0 +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_range, tworaises_cutoff_bigblind) * 1 * 0 +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_sb_range, tworaises_dealer_smallblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,0,de_range,sb_de_range)[2] * (2*AllIn + Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_range, tworaises_dealer_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,0,de_range,bb_de_range)[2] * (2*AllIn + Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, bb_sb_range, tworaises_smallblind_bigblind) * 1 * 0 +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_sb_range, threeraises_cutoff_dealer_smallblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,co_range,de_co_range,sb_co_de_range)[2] * (3*AllIn + Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_range, bb_co_de_range, threeraises_cutoff_dealer_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,co_range,de_co_range,bb_co_de_range)[2] * (3*AllIn + Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_sb_range, threeraises_cutoff_smallblind_bigblind) * 1 * 0 +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_sb_range, threeraises_dealer_smallblind_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,de_range,sb_de_range,bb_de_sb_range)[1] * (3*AllIn) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_sb_range, fourraises_cutoff_dealer_smallblind_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, co_range,de_co_range,sb_co_de_range,bb_co_de_sb_range)[1] * (4*AllIn);
+            probability_empty_bigblind                               * 1                                       * 0                   +
+            probability_oneraise_cutoff                              * 1                                       * 0                   +
+            probability_probability_oneraise_dealer                  * 1                                       * (Sb + Bb)           +
+            probability_oneraise_smallblind                          * 1                                       * 0                   +
+            probability_tworaises_cutoff_dealer                      * ((0.01) * co_VS_de_equity[3]             * (2*AllIn + Sb + Bb) - AllIn) +
+            probability_tworaises_cutoff_smallblind                  * 1                                       * 0                   +
+            probability_tworaises_cutoff_bigblind                    * 1                                       * 0                   +
+            probability_tworaises_dealer_smallblind                  * ((0.01) * de_VS_sb_equity[2]             * (2*AllIn + Bb) - AllIn)     +
+            probability_tworaises_dealer_bigblind                    * ((0.01) * de_VS_bb_equity[2]             * (2*AllIn + Sb) - AllIn)     +
+            probability_probability_tworaises_smallblind_bigblind    * 1                                       * 0                   +
+            probability_threeraises_cutoff_dealer_smallblind         * ((0.01) * co_VS_de_VS_sb_equity[2]       * (3*AllIn + Bb) - AllIn)      +
+            probability_threeraises_cutoff_dealer_bigblind           * ((0.01) * co_VS_de_VS_bb_equity[2]       * (3*AllIn + Sb) - AllIn)     +
+            probability_threeraises_cutoff_smallblind_bigblind       * 1                                       * 0                   +
+            probability_threeraises_dealer_smallblind_bigblind       * ((0.01) * de_VS_sb_VS_bb_equity[1]       * (3*AllIn) - AllIn)          +
+            probability_fourraises_cutoff_dealer_smallblind_bigblind * ((0.01) * co_VS_de_VS_sb_VS_bb_equity[1] * (4*AllIn) - AllIn);
 
     double sb_value =
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, 0, empty_bigblind) * 1 * (-Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_range, oneraise_cutoff) * 1 * (-Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_range, oneraise_dealer) * 1 * (-Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, bb_sb_range, oneraise_smallblind) * 1 * (+Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_range, tworaises_cutoff_dealer) * 1 * (-Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_sb_range, tworaises_cutoff_smallblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,0,co_range,sb_co_range)[3] * (2*AllIn + Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_range, tworaises_cutoff_bigblind) * 1 * (-Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_sb_range, tworaises_dealer_smallblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,0,de_range,sb_de_range)[3] * (2*AllIn + Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_range, tworaises_dealer_bigblind) * 1 * (-Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, bb_sb_range, tworaises_smallblind_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,0,sb_range,bb_sb_range)[2] * (2*AllIn) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_sb_range, threeraises_cutoff_dealer_smallblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,co_range,de_co_range,sb_co_de_range)[3] * (3*AllIn + Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_range, bb_co_de_range, threeraises_cutoff_dealer_bigblind) * 1 * (-Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_sb_range, threeraises_cutoff_smallblind_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,co_range,sb_co_range,bb_co_sb_range)[2] * (3*AllIn) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_sb_range, threeraises_dealer_smallblind_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,de_range,sb_de_range,bb_de_sb_range)[2] * (3*AllIn) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_sb_range, fourraises_cutoff_dealer_smallblind_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, co_range,de_co_range,sb_co_de_range,bb_co_de_sb_range)[2] * (4*AllIn);
+            probability_empty_bigblind                               * 1                                       * (-Sb)          +
+            probability_oneraise_cutoff                              * 1                                       * (-Sb)          +
+            probability_probability_oneraise_dealer                  * 1                                       * (-Sb)          +
+            probability_oneraise_smallblind                          * 1                                       * (+Bb)          +
+            probability_tworaises_cutoff_dealer                      * 1                                       * (-Sb)          +
+            probability_tworaises_cutoff_smallblind                  * ((0.01) * co_VS_sb_equity[3]             * (2*AllIn + Bb)  - AllIn)+
+            probability_tworaises_cutoff_bigblind                    * 1                                       * (-Sb)          +
+            probability_tworaises_dealer_smallblind                  * ((0.01) * de_VS_sb_equity[3]             * (2*AllIn + Bb)  - AllIn)+
+            probability_tworaises_dealer_bigblind                    * 1                                       * (-Sb)          +
+            probability_probability_tworaises_smallblind_bigblind    * ((0.01) * sb_VS_bb_equity[2]             * (2*AllIn)      - AllIn)+
+            probability_threeraises_cutoff_dealer_smallblind         * ((0.01) * co_VS_de_VS_sb_equity[3]       * (3*AllIn + Bb) - AllIn)+
+            probability_threeraises_cutoff_dealer_bigblind           * 1                                       * (-Sb)          +
+            probability_threeraises_cutoff_smallblind_bigblind       * ((0.01) * co_VS_sb_VS_bb_equity[2]       * (3*AllIn)      -AllIn) +
+            probability_threeraises_dealer_smallblind_bigblind       * ((0.01) * de_VS_sb_VS_bb_equity[2]       * (3*AllIn)      -AllIn)+
+            probability_fourraises_cutoff_dealer_smallblind_bigblind * ((0.01) * co_VS_de_VS_sb_VS_bb_equity[2] * (4*AllIn) - AllIn);
 
     double bb_value =
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, 0, empty_bigblind) * 1 * (Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_range, oneraise_cutoff) * 1 * (-Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_range, oneraise_dealer) * 1 * (-Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, bb_sb_range, oneraise_smallblind) * 1 * (-Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_range, tworaises_cutoff_dealer) * 1 * (-Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_sb_range, tworaises_cutoff_smallblind) * 1 * (-Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_range, tworaises_cutoff_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,0,co_range,bb_co_range)[3] * (2*AllIn + Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_sb_range, tworaises_dealer_smallblind) * 1 * (-Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_range, tworaises_dealer_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,0,de_range,bb_de_range)[3] * (2*AllIn + Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_range, bb_sb_range, tworaises_smallblind_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,0,sb_range,bb_sb_range)[3] * (2*AllIn) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_sb_range, threeraises_cutoff_dealer_smallblind) * 1 * (-Bb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_range, bb_co_de_range, threeraises_cutoff_dealer_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,co_range,de_co_range,bb_co_de_range)[3] * (3*AllIn + Sb) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_range, bb_co_sb_range, threeraises_cutoff_smallblind_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,co_range,sb_co_range,bb_co_sb_range)[3] * (3*AllIn) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_range, sb_de_range, bb_de_sb_range, threeraises_dealer_smallblind_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, 0,de_range,sb_de_range,bb_de_sb_range)[3] * (3*AllIn) +
-            (1/100) * get_scenario_probability(scenario_probability_map, co_range, de_co_range, sb_co_de_range, bb_co_de_sb_range, fourraises_cutoff_dealer_smallblind_bigblind) * (1/100) * get_ranges_equity(ranges_equity_map, co_range,de_co_range,sb_co_de_range,bb_co_de_sb_range)[3] * (4*AllIn);
+            probability_empty_bigblind                               * 1                                       * (Sb)           +
+            probability_oneraise_cutoff                              * 1                                       * (-Bb)          +
+            probability_probability_oneraise_dealer                  * 1                                       * (-Bb)          +
+            probability_oneraise_smallblind                          * 1                                       * (-Bb)          +
+            probability_tworaises_cutoff_dealer                      * 1                                       * (-Bb)          +
+            probability_tworaises_cutoff_smallblind                  * 1                                       * (-Bb)          +
+            probability_tworaises_cutoff_bigblind                    * ((0.01) * co_VS_bb_equity[3]             * (2*AllIn + Sb) -AllIn)+
+            probability_tworaises_dealer_smallblind                  * 1                                       * (-Bb)          +
+            probability_tworaises_dealer_bigblind                    * ((0.01) * de_VS_bb_equity[3]             * (2*AllIn + Sb) -AllIn)+
+            probability_probability_tworaises_smallblind_bigblind    * ((0.01) * sb_VS_bb_equity[3]             * (2*AllIn)      -AllIn)+
+            probability_threeraises_cutoff_dealer_smallblind         * 1                                       * (-Bb)          +
+            probability_threeraises_cutoff_dealer_bigblind           * ((0.01) * co_VS_de_VS_bb_equity[3]       * (3*AllIn + Sb) -AllIn)+
+            probability_threeraises_cutoff_smallblind_bigblind       * ((0.01) * co_VS_sb_VS_bb_equity[3]       * (3*AllIn)      -AllIn)+
+            probability_threeraises_dealer_smallblind_bigblind       * ((0.01) * de_VS_sb_VS_bb_equity[3]       * (3*AllIn)      -AllIn)+
+            probability_fourraises_cutoff_dealer_smallblind_bigblind * ((0.01) * co_VS_de_VS_sb_VS_bb_equity[3] * (4*AllIn) -AllIn);
 
-
-    if(co_value+de_value+sb_value+bb_value != 0){
-        cout << "-Assert-" << co_value+de_value+sb_value+bb_value << endl;
+    double value_error = Sb;
+    if(abs(co_value+de_value+sb_value+bb_value) > value_error){
+        cout << "-E- value_error too big, total value: " ;
+        cout << co_value + de_value + sb_value + bb_value << endl;
+        cout << co_value << "," << de_value << "," << sb_value << "," << bb_value << endl;
+        throw exception();
     }
 
     positions_expectancy iter_value{co_value, de_value, sb_value, bb_value};
+
     return iter_value;
 }
 
