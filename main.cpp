@@ -58,131 +58,17 @@ positions_expectancy calc_iteration_value(double AllIn, double Bb, double Sb,
 
 position_strategy find_maximal_strategy(map_strategy_value);
 
+vector<position_strategy> calc_min_max(map_ranges_equity & ranges_equity, map_scenario_probability & scenario_probability, double AllIn, double SmallBlind, double BigBlind,
+                                       positions_ranges & co_range, positions_ranges & de_range, positions_ranges & de_co_range,
+                                       positions_ranges & sb_range, positions_ranges & sb_co_range, positions_ranges & sb_de_range, positions_ranges & sb_co_de_range,
+                                       positions_ranges & bb_co_range, positions_ranges & bb_de_range, positions_ranges & bb_sb_range,
+                                       positions_ranges & bb_co_de_range, positions_ranges & bb_co_sb_range, positions_ranges & bb_de_sb_range, positions_ranges & bb_co_de_sb_range);
+
+
 /* Functions - middle:
  *
  *
  */
-
-vector<position_strategy> calc_min_max(map_ranges_equity ranges_equity, map_scenario_probability scenario_probability, double AllIn, double SmallBlind, double BigBlind,
-        positions_ranges & co_range, positions_ranges & de_range, positions_ranges & de_co_range,
-        positions_ranges & sb_range, positions_ranges & sb_co_range, positions_ranges & sb_de_range, positions_ranges & sb_co_de_range,
-        positions_ranges & bb_co_range, positions_ranges & bb_de_range, positions_ranges & bb_sb_range,
-        positions_ranges & bb_co_de_range, positions_ranges & bb_co_sb_range, positions_ranges & bb_de_sb_range, positions_ranges & bb_co_de_sb_range){
-
-    map_strategy_value co_min_values = map_strategy_value(), de_min_values = map_strategy_value(), sb_min_values = map_strategy_value(), bb_min_values = map_strategy_value();
-    unsigned int index = 0, total_iter = co_range.size() * de_range.size() * de_co_range.size() * sb_range.size() * sb_co_range.size() *
-                                         sb_de_range.size() * sb_co_de_range.size() * bb_co_range.size() * bb_de_range.size() * bb_sb_range.size() *
-                                         bb_co_de_range.size() * bb_co_sb_range.size() * bb_de_sb_range.size() * bb_co_de_sb_range.size();
-
-
-    for(auto co_iter : co_range) {
-        co_min_values[vector<int>{co_iter}] = 100;
-    }
-    for(auto de_iter : de_range) {
-        for (auto de_co_iter : de_co_range) {
-            de_min_values[vector<int>{de_iter, de_co_iter}] = 100;
-            }
-    }
-    for (auto sb_iter : sb_range) {
-        for (auto sb_co_iter : sb_co_range) {
-            for (auto sb_de_iter : sb_de_range) {
-                for (auto sb_co_de_iter : sb_co_de_range) {
-                    sb_min_values[vector<int>{sb_iter, sb_co_iter, sb_de_iter, sb_co_de_iter}] = 100;
-                }
-            }
-        }
-    }
-    for (auto bb_co_iter : bb_co_range) {
-        for (auto bb_de_iter : bb_de_range) {
-            for (auto bb_sb_iter : bb_sb_range) {
-                for (auto bb_co_de_iter : bb_co_de_range) {
-                    for (auto bb_co_sb_iter : bb_co_sb_range) {
-                        for (auto bb_de_sb_iter : bb_de_sb_range) {
-                            for (auto bb_co_de_sb_iter : bb_co_de_sb_range) {
-                                bb_min_values[vector<int>{bb_co_iter, bb_de_iter, bb_sb_iter,
-                                                          bb_co_de_iter, bb_co_sb_iter, bb_de_sb_iter, bb_co_de_sb_iter}] = 100;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    cout << "-I- Starting calculation of min max algorithm..." << endl;
-    for(auto co_iter : co_range){
-        /*
-         * */
-        for(auto de_iter : de_range) {
-            for (auto de_co_iter : de_co_range) {
-                /*
-                * */
-                for (auto sb_iter : sb_range) {
-                    for (auto sb_co_iter : sb_co_range) {
-                        for (auto sb_de_iter : sb_de_range) {
-                            for (auto sb_co_de_iter : sb_co_de_range) {
-                                /*
-                                * */
-                                for (auto bb_co_iter : bb_co_range) {
-                                    for (auto bb_de_iter : bb_de_range) {
-                                        for (auto bb_sb_iter : bb_sb_range) {
-                                            for (auto bb_co_de_iter : bb_co_de_range) {
-                                                for (auto bb_co_sb_iter : bb_co_sb_range) {
-                                                    for (auto bb_de_sb_iter : bb_de_sb_range) {
-                                                        for (auto bb_co_de_sb_iter : bb_co_de_sb_range) {
-                                                            /*
-                                                            * */
-                                                            positions_expectancy e =
-                                                                    calc_iteration_value(AllIn, BigBlind, SmallBlind,
-                                                                                         co_iter, de_iter, sb_iter, de_co_iter, sb_co_iter, sb_de_iter,
-                                                                                         bb_co_iter, bb_de_iter, bb_sb_iter, sb_co_de_iter, bb_co_de_iter,
-                                                                                         bb_co_sb_iter, bb_de_sb_iter, bb_co_de_sb_iter,
-                                                                                         ranges_equity, scenario_probability);
-
-                                                            if(e[0] < co_min_values[vector<int>{co_iter}]){
-                                                                co_min_values[vector<int>{co_iter}] = e[0];
-                                                            }
-                                                            if(e[1] < de_min_values[vector<int>{de_iter, de_co_iter}] ){
-                                                                de_min_values[vector<int>{de_iter, de_co_iter}] = e[1];
-                                                            }
-                                                            if(e[2] < sb_min_values[vector<int>{sb_iter, sb_co_iter, sb_de_iter, sb_co_de_iter}]){
-                                                                sb_min_values[vector<int>{sb_iter, sb_co_iter, sb_de_iter, sb_co_de_iter}] = e[2];
-                                                            }
-                                                            if(e[3] < bb_min_values[vector<int>{bb_co_iter, bb_de_iter, bb_sb_iter,
-                                                                                         bb_co_de_iter, bb_co_sb_iter, bb_de_sb_iter, bb_co_de_sb_iter}]){
-                                                                bb_min_values[vector<int>{bb_co_iter, bb_de_iter, bb_sb_iter,
-                                                                                          bb_co_de_iter, bb_co_sb_iter, bb_de_sb_iter, bb_co_de_sb_iter}] = e[3];
-                                                            }
-
-                                                            index ++;
-                                                            if(index % (total_iter/100 + !(total_iter/100)) == 0){
-                                                                cout << "=" ;
-                                                            }
-
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    cout << endl;
-
-    position_strategy max_co = find_maximal_strategy(co_min_values);
-    position_strategy max_de = find_maximal_strategy(de_min_values);
-    position_strategy max_sb = find_maximal_strategy(sb_min_values);
-    position_strategy max_bb = find_maximal_strategy(bb_min_values);
-
-    return vector<position_strategy>{max_co, max_de, max_sb, max_bb};
-}
 
 
 
@@ -477,6 +363,128 @@ position_strategy find_maximal_strategy(map_strategy_value map){
         }
     }
     return max_strategy;
+}
+
+
+vector<position_strategy> calc_min_max(map_ranges_equity & ranges_equity, map_scenario_probability & scenario_probability, double AllIn, double SmallBlind, double BigBlind,
+                                       positions_ranges & co_range, positions_ranges & de_range, positions_ranges & de_co_range,
+                                       positions_ranges & sb_range, positions_ranges & sb_co_range, positions_ranges & sb_de_range, positions_ranges & sb_co_de_range,
+                                       positions_ranges & bb_co_range, positions_ranges & bb_de_range, positions_ranges & bb_sb_range,
+                                       positions_ranges & bb_co_de_range, positions_ranges & bb_co_sb_range, positions_ranges & bb_de_sb_range, positions_ranges & bb_co_de_sb_range){
+
+    map_strategy_value co_min_values = map_strategy_value(), de_min_values = map_strategy_value(), sb_min_values = map_strategy_value(), bb_min_values = map_strategy_value();
+    unsigned int index = 0, total_iter = co_range.size() * de_range.size() * de_co_range.size() * sb_range.size() * sb_co_range.size() *
+                                         sb_de_range.size() * sb_co_de_range.size() * bb_co_range.size() * bb_de_range.size() * bb_sb_range.size() *
+                                         bb_co_de_range.size() * bb_co_sb_range.size() * bb_de_sb_range.size() * bb_co_de_sb_range.size();
+
+
+    for(auto co_iter : co_range) {
+        co_min_values[vector<int>{co_iter}] = 100;
+    }
+    for(auto de_iter : de_range) {
+        for (auto de_co_iter : de_co_range) {
+            de_min_values[vector<int>{de_iter, de_co_iter}] = 100;
+        }
+    }
+    for (auto sb_iter : sb_range) {
+        for (auto sb_co_iter : sb_co_range) {
+            for (auto sb_de_iter : sb_de_range) {
+                for (auto sb_co_de_iter : sb_co_de_range) {
+                    sb_min_values[vector<int>{sb_iter, sb_co_iter, sb_de_iter, sb_co_de_iter}] = 100;
+                }
+            }
+        }
+    }
+    for (auto bb_co_iter : bb_co_range) {
+        for (auto bb_de_iter : bb_de_range) {
+            for (auto bb_sb_iter : bb_sb_range) {
+                for (auto bb_co_de_iter : bb_co_de_range) {
+                    for (auto bb_co_sb_iter : bb_co_sb_range) {
+                        for (auto bb_de_sb_iter : bb_de_sb_range) {
+                            for (auto bb_co_de_sb_iter : bb_co_de_sb_range) {
+                                bb_min_values[vector<int>{bb_co_iter, bb_de_iter, bb_sb_iter,
+                                                          bb_co_de_iter, bb_co_sb_iter, bb_de_sb_iter, bb_co_de_sb_iter}] = 100;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    cout << "-I- Starting calculation of min max algorithm..." << endl;
+    for(auto co_iter : co_range){
+        /*
+         * */
+        for(auto de_iter : de_range) {
+            for (auto de_co_iter : de_co_range) {
+                /*
+                * */
+                for (auto sb_iter : sb_range) {
+                    for (auto sb_co_iter : sb_co_range) {
+                        for (auto sb_de_iter : sb_de_range) {
+                            for (auto sb_co_de_iter : sb_co_de_range) {
+                                /*
+                                * */
+                                for (auto bb_co_iter : bb_co_range) {
+                                    for (auto bb_de_iter : bb_de_range) {
+                                        for (auto bb_sb_iter : bb_sb_range) {
+                                            for (auto bb_co_de_iter : bb_co_de_range) {
+                                                for (auto bb_co_sb_iter : bb_co_sb_range) {
+                                                    for (auto bb_de_sb_iter : bb_de_sb_range) {
+                                                        for (auto bb_co_de_sb_iter : bb_co_de_sb_range) {
+                                                            /*
+                                                            * */
+                                                            positions_expectancy e =
+                                                                    calc_iteration_value(AllIn, BigBlind, SmallBlind,
+                                                                                         co_iter, de_iter, sb_iter, de_co_iter, sb_co_iter, sb_de_iter,
+                                                                                         bb_co_iter, bb_de_iter, bb_sb_iter, sb_co_de_iter, bb_co_de_iter,
+                                                                                         bb_co_sb_iter, bb_de_sb_iter, bb_co_de_sb_iter,
+                                                                                         ranges_equity, scenario_probability);
+
+                                                            if(e[0] < co_min_values[vector<int>{co_iter}]){
+                                                                co_min_values[vector<int>{co_iter}] = e[0];
+                                                            }
+                                                            if(e[1] < de_min_values[vector<int>{de_iter, de_co_iter}] ){
+                                                                de_min_values[vector<int>{de_iter, de_co_iter}] = e[1];
+                                                            }
+                                                            if(e[2] < sb_min_values[vector<int>{sb_iter, sb_co_iter, sb_de_iter, sb_co_de_iter}]){
+                                                                sb_min_values[vector<int>{sb_iter, sb_co_iter, sb_de_iter, sb_co_de_iter}] = e[2];
+                                                            }
+                                                            if(e[3] < bb_min_values[vector<int>{bb_co_iter, bb_de_iter, bb_sb_iter,
+                                                                                                bb_co_de_iter, bb_co_sb_iter, bb_de_sb_iter, bb_co_de_sb_iter}]){
+                                                                bb_min_values[vector<int>{bb_co_iter, bb_de_iter, bb_sb_iter,
+                                                                                          bb_co_de_iter, bb_co_sb_iter, bb_de_sb_iter, bb_co_de_sb_iter}] = e[3];
+                                                            }
+
+                                                            index ++;
+                                                            if(index % (total_iter/100 + !(total_iter/100)) == 0){
+                                                                cout << "=" ;
+                                                            }
+
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    cout << endl;
+
+    position_strategy max_co = find_maximal_strategy(co_min_values);
+    position_strategy max_de = find_maximal_strategy(de_min_values);
+    position_strategy max_sb = find_maximal_strategy(sb_min_values);
+    position_strategy max_bb = find_maximal_strategy(bb_min_values);
+
+    return vector<position_strategy>{max_co, max_de, max_sb, max_bb};
 }
 
 
