@@ -30,7 +30,10 @@ typedef vector<int> positions_ranges;
 typedef vector<int> position_strategy;
 typedef map<tuple< positions_ranges, Scenario >, double > map_scenario_probability;
 typedef map<positions_ranges, positions_expectancy > map_ranges_equity;
-typedef map<vector<int>, double> map_strategy_value;
+typedef map<position_strategy, double> map_strategy_value;
+typedef map<position_strategy, positions_expectancy> map_strategy_values;
+
+#define EQUITY_ERROR 0.15
 
 /* Functions - done:
  *      1. string_to_scenario - convert string to the Scenario enum value
@@ -50,19 +53,26 @@ positions_expectancy get_ranges_equity(map_ranges_equity & map, int co_range, in
 map_ranges_equity read_ranges_equity_file();
 map_scenario_probability read_scenario_probability_file();
 positions_expectancy calc_iteration_value(double AllIn, double Bb, double Sb,
-                                          int co_range, int de_range, int sb_range,
-                                          int de_co_range, int sb_co_range, int sb_de_range, int bb_co_range, int bb_de_range, int bb_sb_range,
-                                          int sb_co_de_range, int bb_co_de_range, int bb_co_sb_range, int bb_de_sb_range,
-                                          int bb_co_de_sb_range,
-                                          map_ranges_equity& ranges_equity_map, map_scenario_probability& scenario_probability_map) ;
+        int co_range, int de_range, int sb_range,
+        int de_co_range, int sb_co_range, int sb_de_range, int bb_co_range, int bb_de_range, int bb_sb_range,
+        int sb_co_de_range, int bb_co_de_range, int bb_co_sb_range, int bb_de_sb_range,
+        int bb_co_de_sb_range,
+        map_ranges_equity& ranges_equity_map, map_scenario_probability& scenario_probability_map) ;
 
 position_strategy find_maximal_strategy(map_strategy_value);
 
 vector<position_strategy> calc_min_max(map_ranges_equity & ranges_equity, map_scenario_probability & scenario_probability, double AllIn, double SmallBlind, double BigBlind,
-                                       positions_ranges & co_range, positions_ranges & de_range, positions_ranges & de_co_range,
-                                       positions_ranges & sb_range, positions_ranges & sb_co_range, positions_ranges & sb_de_range, positions_ranges & sb_co_de_range,
-                                       positions_ranges & bb_co_range, positions_ranges & bb_de_range, positions_ranges & bb_sb_range,
-                                       positions_ranges & bb_co_de_range, positions_ranges & bb_co_sb_range, positions_ranges & bb_de_sb_range, positions_ranges & bb_co_de_sb_range);
+        positions_ranges & co_range, positions_ranges & de_range, positions_ranges & de_co_range,
+        positions_ranges & sb_range, positions_ranges & sb_co_range, positions_ranges & sb_de_range, positions_ranges & sb_co_de_range,
+        positions_ranges & bb_co_range, positions_ranges & bb_de_range, positions_ranges & bb_sb_range,
+        positions_ranges & bb_co_de_range, positions_ranges & bb_co_sb_range, positions_ranges & bb_de_sb_range, positions_ranges & bb_co_de_sb_range);
+
+map_strategy_values calc_nash_definition(map_ranges_equity & ranges_equity, map_scenario_probability & scenario_probability,
+        double AllIn, double SmallBlind, double BigBlind, double delta,
+        positions_ranges & co_range, positions_ranges & de_range, positions_ranges & de_co_range,
+        positions_ranges & sb_range, positions_ranges & sb_co_range, positions_ranges & sb_de_range, positions_ranges & sb_co_de_range,
+        positions_ranges & bb_co_range, positions_ranges & bb_de_range, positions_ranges & bb_sb_range,
+        positions_ranges & bb_co_de_range, positions_ranges & bb_co_sb_range, positions_ranges & bb_de_sb_range, positions_ranges & bb_co_de_sb_range);
 
 
 /* Functions - middle:
@@ -92,51 +102,107 @@ int main() {
     map_ranges_equity ranges_equity = read_ranges_equity_file();
     map_scenario_probability scenario_probability = read_scenario_probability_file();
 
-    vector<int> co_range{25,30,35};
+    positions_ranges co_range, de_range, de_co_range, sb_range, sb_co_range, sb_de_range, sb_co_de_range,
+            bb_co_range, bb_de_range, bb_sb_range, bb_co_de_range, bb_co_sb_range, bb_de_sb_range, bb_co_de_sb_range;
 
-    vector<int> de_range{25,30,35,40};
-    vector<int> de_co_range{5,10,15};
+    bool run_dealer = false, run_cutoff = false, run_smallblind = false;
 
-    vector<int> sb_range{45,50,60,70};
-    vector<int> sb_co_range{10,15,20};
-    vector<int> sb_de_range{10,15,20};
-    vector<int> sb_co_de_range{5,10,15};
+    if(run_dealer){
+        co_range = positions_ranges{0};
 
-    vector<int> bb_co_range{15,20,25,30,35};
-    vector<int> bb_de_range{15,20,25,30,35};
-    vector<int> bb_sb_range{35,40,45};
-    vector<int> bb_co_de_range{5,10,15};
-    vector<int> bb_co_sb_range{5,10,15,20};
-    vector<int> bb_de_sb_range{5,10,15,20};
-    vector<int> bb_co_de_sb_range{5,10,15};
+        de_range = positions_ranges{5,10,15,20,25,30,35,40,45,50,60,70};
+        de_co_range = positions_ranges{0};
+
+        sb_range = positions_ranges{5,10,15,20,25,30,35,40,45,50,60,70};
+        sb_co_range = positions_ranges{0};
+        sb_de_range = positions_ranges{5,10,15,20,25,30,35,40,45,50,60,70};
+        sb_co_de_range = positions_ranges{0};
+
+        bb_co_range = positions_ranges{0};
+        bb_de_range = positions_ranges{5,10,15,20,25,30,35,40,45,50,60,70};
+        bb_sb_range = positions_ranges{5,10,15,20,25,30,35,40,45,50,60,70};
+        bb_co_de_range = positions_ranges{0};
+        bb_co_sb_range = positions_ranges{0};
+        bb_de_sb_range = positions_ranges{5,10,15,20,25,30,35,40,45,50,60,70};
+        bb_co_de_sb_range = positions_ranges{0};
+    }
+    else if(run_cutoff){
+        co_range = positions_ranges{15,20,25,30,35,40,45};
+
+        de_range = positions_ranges{0};
+        de_co_range = positions_ranges{5,10,15,20,25};
+
+        sb_range = positions_ranges{0};
+        sb_co_range = positions_ranges{5,10,15,20,25,30,35};
+        sb_de_range = positions_ranges{0};
+        sb_co_de_range = positions_ranges{5,10,15,20,25,30,35};
+
+        bb_co_range = positions_ranges{5,10,15,20,25,30,35};
+        bb_de_range = positions_ranges{0};
+        bb_sb_range = positions_ranges{0};
+        bb_co_de_range = positions_ranges{5,10,15,20,25,30,35};
+        bb_co_sb_range = positions_ranges{5,10,15,20,25,30,35};
+        bb_de_sb_range = positions_ranges{0};
+        bb_co_de_sb_range = positions_ranges{5,10,15,20,25,30,35};
+    }
+    else if(run_smallblind){
+        co_range = positions_ranges{0};
+
+        de_range = positions_ranges{0};
+        de_co_range = positions_ranges{0};
+
+        sb_range = positions_ranges{5,10,15,20,25,30,35,40,45,50,60,70};
+        sb_co_range = positions_ranges{0};
+        sb_de_range = positions_ranges{0};
+        sb_co_de_range = positions_ranges{0};
+
+        bb_co_range = positions_ranges{0};
+        bb_de_range = positions_ranges{0};
+        bb_sb_range = positions_ranges{5,10,15,20,25,30,35,40,45,50,60,70};
+        bb_co_de_range = positions_ranges{0};
+        bb_co_sb_range = positions_ranges{0};
+        bb_de_sb_range = positions_ranges{0};
+        bb_co_de_sb_range = positions_ranges{0};
+    }
+    else{
+        co_range = positions_ranges{20,25,30};
+
+        de_range = positions_ranges{25,30,35};
+        de_co_range = positions_ranges{5,10,15};
+
+        sb_range = positions_ranges{50,60,70};
+        sb_co_range = positions_ranges{5,10,15};
+        sb_de_range = positions_ranges{10,15,20};
+        sb_co_de_range = positions_ranges{5,10,15};
+
+        bb_co_range = positions_ranges{20,25,30};
+        bb_de_range = positions_ranges{20,25,30};
+        bb_sb_range = positions_ranges{30,35,40};
+        bb_co_de_range = positions_ranges{10,15,20};
+        bb_co_sb_range = positions_ranges{10,15,20};
+        bb_de_sb_range = positions_ranges{15,20,25};
+        bb_co_de_sb_range = positions_ranges{5,10,15};
+    }
+
 
     unsigned int index=0;
     unsigned int total_iter = co_range.size() * de_range.size() * de_co_range.size() * sb_range.size() * sb_co_range.size() *
             sb_de_range.size() * sb_co_de_range.size() * bb_co_range.size() * bb_de_range.size() * bb_sb_range.size() *
             bb_co_de_range.size() * bb_co_sb_range.size() * bb_de_sb_range.size() * bb_co_de_sb_range.size();
 
-    double all_in=2.0, small_blind = 0.1, big_blind = 0.25;
+    double all_in=1.0, small_blind = 0.05, big_blind = 0.1;
 
-    vector<position_strategy> res = calc_min_max(ranges_equity, scenario_probability, all_in, small_blind, big_blind,
+    /*vector<position_strategy> res = calc_min_max(ranges_equity, scenario_probability, all_in, small_blind, big_blind,
+            co_range, de_range, de_co_range, sb_range, sb_co_range, sb_de_range, sb_co_de_range, bb_co_range, bb_de_range,
+            bb_sb_range, bb_co_de_range, bb_co_sb_range, bb_de_sb_range, bb_co_de_sb_range);
+    */
+
+    double delta = 0.005;
+    map_strategy_values res = calc_nash_definition(ranges_equity, scenario_probability, all_in, small_blind, big_blind, delta,
             co_range, de_range, de_co_range, sb_range, sb_co_range, sb_de_range, sb_co_de_range, bb_co_range, bb_de_range,
             bb_sb_range, bb_co_de_range, bb_co_sb_range, bb_de_sb_range, bb_co_de_sb_range);
 
-    cout << "CO result: " << endl;
-    for(auto i : res[0])
-        cout << i << ", ";
-    cout << endl;
-    cout << "DE result: " << endl;
-    for(auto i : res[1])
-        cout << i << ", ";
-    cout << endl;
-    cout << "SB result: " << endl;
-    for(auto i : res[2])
-        cout << i << ", ";
-    cout << endl;
-    cout << "BB result: " << endl;
-    for(auto i : res[3])
-        cout << i << ", ";
-    cout << endl;
+
 
 
     /* Test data files
@@ -350,6 +416,14 @@ positions_expectancy get_ranges_equity(map_ranges_equity & map, int co_range, in
     positions_expectancy expectancy_res =
             positions_expectancy{expectancy_unsort[index_co], expectancy_unsort[index_de], expectancy_unsort[index_sb], expectancy_unsort[index_bb]};
 
+    if(abs(expectancy_res[0] + expectancy_res[1] + expectancy_res[2] + expectancy_res[3] - 100) > EQUITY_ERROR){
+        cout << "-E- equity too divergent, total value: " ;
+        cout << expectancy_res[0] + expectancy_res[1] + expectancy_res[2] + expectancy_res[3] << endl;
+        cout << "    specific values: " << expectancy_res[0] << ", " << expectancy_res[1] << ", " <<
+                expectancy_res[2] << ", " << expectancy_res[3] << endl;
+        throw exception();
+    }
+
     return expectancy_res;
 }
 
@@ -367,10 +441,10 @@ position_strategy find_maximal_strategy(map_strategy_value map){
 
 
 vector<position_strategy> calc_min_max(map_ranges_equity & ranges_equity, map_scenario_probability & scenario_probability, double AllIn, double SmallBlind, double BigBlind,
-                                       positions_ranges & co_range, positions_ranges & de_range, positions_ranges & de_co_range,
-                                       positions_ranges & sb_range, positions_ranges & sb_co_range, positions_ranges & sb_de_range, positions_ranges & sb_co_de_range,
-                                       positions_ranges & bb_co_range, positions_ranges & bb_de_range, positions_ranges & bb_sb_range,
-                                       positions_ranges & bb_co_de_range, positions_ranges & bb_co_sb_range, positions_ranges & bb_de_sb_range, positions_ranges & bb_co_de_sb_range){
+        positions_ranges & co_range, positions_ranges & de_range, positions_ranges & de_co_range,
+        positions_ranges & sb_range, positions_ranges & sb_co_range, positions_ranges & sb_de_range, positions_ranges & sb_co_de_range,
+        positions_ranges & bb_co_range, positions_ranges & bb_de_range, positions_ranges & bb_sb_range,
+        positions_ranges & bb_co_de_range, positions_ranges & bb_co_sb_range, positions_ranges & bb_de_sb_range, positions_ranges & bb_co_de_sb_range){
 
     map_strategy_value co_min_values = map_strategy_value(), de_min_values = map_strategy_value(), sb_min_values = map_strategy_value(), bb_min_values = map_strategy_value();
     unsigned int index = 0, total_iter = co_range.size() * de_range.size() * de_co_range.size() * sb_range.size() * sb_co_range.size() *
@@ -480,12 +554,220 @@ vector<position_strategy> calc_min_max(map_ranges_equity & ranges_equity, map_sc
     cout << endl;
 
     position_strategy max_co = find_maximal_strategy(co_min_values);
+    cout << "CO result: " << endl;
+    for(auto i : max_co)
+        cout << i << ", ";
+    cout << endl;
+    cout << co_min_values[max_co] << endl;
+
     position_strategy max_de = find_maximal_strategy(de_min_values);
+    cout << "DE result: " << endl;
+    for(auto i : max_de)
+        cout << i << ", ";
+    cout << endl;
+    cout << de_min_values[max_de] << endl;
+
     position_strategy max_sb = find_maximal_strategy(sb_min_values);
+    cout << "SB result: " << endl;
+    for(auto i : max_sb)
+        cout << i << ", ";
+    cout << endl;
+    cout << sb_min_values[max_sb] << endl;
+
     position_strategy max_bb = find_maximal_strategy(bb_min_values);
+    cout << "BB result: " << endl;
+    for(auto i : max_bb)
+        cout << i << ", ";
+    cout << endl;
+    cout << bb_min_values[max_bb] << endl;
 
     return vector<position_strategy>{max_co, max_de, max_sb, max_bb};
 }
+
+
+
+map_strategy_values calc_nash_definition(map_ranges_equity & ranges_equity, map_scenario_probability & scenario_probability,
+        double AllIn, double SmallBlind, double BigBlind, double delta,
+        positions_ranges & co_range, positions_ranges & de_range, positions_ranges & de_co_range,
+        positions_ranges & sb_range, positions_ranges & sb_co_range, positions_ranges & sb_de_range, positions_ranges & sb_co_de_range,
+        positions_ranges & bb_co_range, positions_ranges & bb_de_range, positions_ranges & bb_sb_range,
+        positions_ranges & bb_co_de_range, positions_ranges & bb_co_sb_range, positions_ranges & bb_de_sb_range, positions_ranges & bb_co_de_sb_range){
+
+
+    map_strategy_values nash_points_values = map_strategy_values();
+    unsigned int index = 0, total_iter = co_range.size() * de_range.size() * de_co_range.size() * sb_range.size() * sb_co_range.size() *
+                                         sb_de_range.size() * sb_co_de_range.size() * bb_co_range.size() * bb_de_range.size() * bb_sb_range.size() *
+                                         bb_co_de_range.size() * bb_co_sb_range.size() * bb_de_sb_range.size() * bb_co_de_sb_range.size();
+
+    cout << "-I- Starting calculation of nash point by definition..." << endl;
+
+    double margin = 0;
+    while(nash_points_values.empty()) {
+        cout << "-I- Current margin: " << margin << endl;
+
+        for (auto co_iter : co_range) {
+            /*         *
+             */
+            for (auto de_iter : de_range) {
+                for (auto de_co_iter : de_co_range) {
+                    /*
+                    */
+                    for (auto sb_iter : sb_range) {
+                        for (auto sb_co_iter : sb_co_range) {
+                            for (auto sb_de_iter : sb_de_range) {
+                                for (auto sb_co_de_iter : sb_co_de_range) {
+                                    /*
+                                     */
+                                    for (auto bb_co_iter : bb_co_range) {
+                                        for (auto bb_de_iter : bb_de_range) {
+                                            for (auto bb_sb_iter : bb_sb_range) {
+                                                for (auto bb_co_de_iter : bb_co_de_range) {
+                                                    for (auto bb_co_sb_iter : bb_co_sb_range) {
+                                                        for (auto bb_de_sb_iter : bb_de_sb_range) {
+                                                            for (auto bb_co_de_sb_iter : bb_co_de_sb_range) {
+
+                                                                positions_expectancy e =
+                                                                        calc_iteration_value(AllIn, BigBlind, SmallBlind,
+                                                                                             co_iter, de_iter, sb_iter,
+                                                                                             de_co_iter, sb_co_iter, sb_de_iter,
+                                                                                             bb_co_iter, bb_de_iter,bb_sb_iter,
+                                                                                             sb_co_de_iter,bb_co_de_iter,
+                                                                                             bb_co_sb_iter,bb_de_sb_iter,bb_co_de_sb_iter,
+                                                                                             ranges_equity,scenario_probability);
+                                                                bool is_nash = true;
+
+                                                                for (auto temp_co_iter : co_range) {
+                                                                    positions_expectancy t =
+                                                                            calc_iteration_value(AllIn, BigBlind,SmallBlind,
+                                                                                                 temp_co_iter, de_iter,sb_iter,
+                                                                                                 de_co_iter,sb_co_iter, sb_de_iter,
+                                                                                                 bb_co_iter, bb_de_iter,bb_sb_iter,
+                                                                                                 sb_co_de_iter,bb_co_de_iter,bb_co_sb_iter,
+                                                                                                 bb_de_sb_iter,bb_co_de_sb_iter,
+                                                                                                 ranges_equity,scenario_probability);
+
+                                                                    if (t[0] > e[0] + margin * abs(e[0])) {
+                                                                        is_nash = false;
+                                                                        break;
+                                                                    }
+                                                                }
+                                                                if (not is_nash) {continue;}
+
+                                                                for (auto temp_de_iter : de_range) {
+                                                                    for (auto temp_de_co_iter : de_co_range) {
+                                                                        positions_expectancy t =
+                                                                                calc_iteration_value(AllIn, BigBlind,SmallBlind,
+                                                                                        co_iter,temp_de_iter,sb_iter,temp_de_co_iter,
+                                                                                        sb_co_iter,sb_de_iter,bb_co_iter,bb_de_iter,
+                                                                                        bb_sb_iter,sb_co_de_iter,bb_co_de_iter,
+                                                                                        bb_co_sb_iter,bb_de_sb_iter,bb_co_de_sb_iter,
+                                                                                        ranges_equity,scenario_probability);
+
+                                                                        if (t[1] > e[1] + margin * abs(e[1])) {
+                                                                            is_nash = false;
+                                                                            break;
+                                                                        }
+                                                                    }
+                                                                }
+                                                                if (not is_nash) {continue;}
+
+                                                                for (auto temp_sb_iter : sb_range) {
+                                                                    for (auto temp_sb_co_iter : sb_co_range) {
+                                                                        for (auto temp_sb_de_iter : sb_de_range) {
+                                                                            for (auto temp_sb_co_de_co_iter : sb_co_de_range) {
+                                                                                positions_expectancy t =
+                                                                                        calc_iteration_value(
+                                                                                                AllIn, BigBlind,SmallBlind,
+                                                                                                co_iter, de_iter,temp_sb_iter,
+                                                                                                de_co_iter,temp_sb_co_iter,temp_sb_de_iter,
+                                                                                                bb_co_iter, bb_de_iter,bb_sb_iter,
+                                                                                                temp_sb_co_de_co_iter,bb_co_de_iter,bb_co_sb_iter,
+                                                                                                bb_de_sb_iter,bb_co_de_sb_iter,
+                                                                                                ranges_equity,scenario_probability);
+                                                                                if (t[2] > e[2] + margin * abs(e[2])) {
+                                                                                    is_nash = false;
+                                                                                    break;
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                                if (not is_nash) {continue;}
+
+                                                                for (auto temp_bb_co_iter : bb_co_range) {
+                                                                    for (auto temp_bb_de_iter : bb_de_range) {
+                                                                        for (auto temp_bb_sb_iter : bb_sb_range) {
+                                                                            for (auto temp_bb_co_de_iter : bb_co_de_range) {
+                                                                                for (auto temp_bb_co_sb_iter : bb_co_sb_range) {
+                                                                                    for (auto temp_bb_de_sb_iter : bb_de_sb_range) {
+                                                                                        for (auto temp_bb_co_de_sb_iter : bb_co_de_sb_range) {
+                                                                                            positions_expectancy t =
+                                                                                                    calc_iteration_value(
+                                                                                                       AllIn,BigBlind,SmallBlind,
+                                                                                                       co_iter,de_iter,sb_iter,de_co_iter,
+                                                                                                       sb_co_iter,sb_de_iter,temp_bb_co_iter,
+                                                                                                       temp_bb_de_iter,temp_bb_sb_iter,
+                                                                                                       sb_co_de_iter,temp_bb_co_de_iter,
+                                                                                                       temp_bb_co_sb_iter,temp_bb_de_sb_iter,
+                                                                                                       temp_bb_co_de_sb_iter,
+                                                                                                       ranges_equity,scenario_probability);
+
+                                                                                            if (t[3] > e[3] + margin * abs(e[3])) {
+                                                                                                is_nash = false;
+                                                                                                break;
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+
+                                                                if (is_nash) {
+                                                                    nash_points_values[position_strategy{co_iter, de_iter, de_co_iter,
+                                                                           sb_iter, sb_co_iter, sb_de_iter, sb_co_de_iter,
+                                                                           bb_co_iter, bb_de_iter, bb_sb_iter,
+                                                                           bb_co_de_iter, bb_co_sb_iter, bb_de_sb_iter,
+                                                                           bb_co_de_sb_iter}] = e;
+                                                                }
+
+                                                            }
+
+                                                            index ++;
+                                                            if(index % (total_iter/100 + !(total_iter/100)) == 0){
+                                                                cout << "=" ;
+                                                            }
+
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        cout << endl;
+        margin += delta;
+    }
+
+    cout << "-I- Results:" << endl;
+    for(auto x: nash_points_values){
+        cout << "\tCO: "<< x.first[0] << endl
+        << "\tDE: " << x.first[1] << ", " << x.first[2] << endl
+        << "\tSB: " << x.first[3] << ", " << x.first[4] << ", " << x.first[5] << ", " << x.first[6] << endl
+        << "\tBB: " << x.first[7] << ", " << x.first[8] << ", " << x.first[9] << ", " << x.first[10] << ", "
+            << x.first[11] << ", " << x.first[12] << ", " << x.first[13] << endl;
+    }
+
+    return nash_points_values;
+}
+
 
 
 positions_expectancy calc_iteration_value(double AllIn, double Bb, double Sb,
@@ -536,65 +818,6 @@ positions_expectancy calc_iteration_value(double AllIn, double Bb, double Sb,
                     co_VS_sb_VS_bb_equity = get_ranges_equity(ranges_equity_map, 0,co_range,sb_co_range,bb_co_sb_range),
                     de_VS_sb_VS_bb_equity = get_ranges_equity(ranges_equity_map, 0,de_range,sb_de_range,bb_de_sb_range),
                     co_VS_de_VS_sb_VS_bb_equity = get_ranges_equity(ranges_equity_map, co_range,de_co_range,sb_co_de_range,bb_co_de_sb_range);
-
-
-    double equity_error = 0.15;
-    if( abs(co_VS_de_equity[2] + co_VS_de_equity[3] - 100) > equity_error ){
-        cout << "-E- co_VS_de_equity too divergent, total value: " ;
-        cout << co_VS_de_equity[0] + co_VS_de_equity[1] + co_VS_de_equity[2] + co_VS_de_equity[3] << endl;
-        throw exception();
-    }
-    if( abs(co_VS_sb_equity[2] + co_VS_sb_equity[3] - 100) > equity_error ){
-        cout << "-E- co_VS_sb_equity too divergent, total value: " ;
-        cout << co_VS_sb_equity[0] + co_VS_sb_equity[1] + co_VS_sb_equity[2] + co_VS_sb_equity[3] << endl;
-        throw exception();
-    }
-    if( abs(co_VS_bb_equity[2] + co_VS_bb_equity[3] - 100) > equity_error ){
-        cout << "-E- co_VS_bb_equity too divergent, total value: " ;
-        cout << co_VS_bb_equity[0] + co_VS_bb_equity[1] + co_VS_bb_equity[2] + co_VS_bb_equity[3] << endl;
-        throw exception();
-    }
-    if( abs(de_VS_sb_equity[2] + de_VS_sb_equity[3] - 100) > equity_error ){
-        cout << "-E- de_VS_sb_equity too divergent, total value: " ;
-        cout << de_VS_sb_equity[0] + de_VS_sb_equity[1] + de_VS_sb_equity[2] + de_VS_sb_equity[3] << endl;
-        throw exception();
-    }
-    if( abs(de_VS_bb_equity[2] + de_VS_bb_equity[3] - 100) > equity_error ){
-        cout << "-E- de_VS_bb_equity too divergent, total value: " ;
-        cout << de_VS_bb_equity[0] + de_VS_bb_equity[1] + de_VS_bb_equity[2] + de_VS_bb_equity[3] << endl;
-        throw exception();
-    }
-    if( abs(sb_VS_bb_equity[2] + sb_VS_bb_equity[3] - 100) > equity_error ){
-        cout << "-E- sb_VS_bb_equity too divergent, total value: " ;
-        cout << sb_VS_bb_equity[0] + sb_VS_bb_equity[1] + sb_VS_bb_equity[2] + sb_VS_bb_equity[3] << endl;
-        throw exception();
-    }
-    if( abs(co_VS_de_VS_sb_equity[1] + co_VS_de_VS_sb_equity[2] + co_VS_de_VS_sb_equity[3] - 100) > equity_error ){
-        cout << "-E- co_VS_de_VS_sb_equity too divergent, total value: " ;
-        cout << co_VS_de_VS_sb_equity[0] + co_VS_de_VS_sb_equity[1] + co_VS_de_VS_sb_equity[2] + co_VS_de_VS_sb_equity[3] << endl;
-        throw exception();
-    }
-    if( abs(co_VS_de_VS_bb_equity[1] + co_VS_de_VS_bb_equity[2] + co_VS_de_VS_bb_equity[3] - 100) > equity_error ){
-        cout << "-E- co_VS_de_VS_bb_equity too divergent, total value: " ;
-        cout << co_VS_de_VS_bb_equity[0] + co_VS_de_VS_bb_equity[1] + co_VS_de_VS_bb_equity[2] + co_VS_de_VS_bb_equity[3] << endl;
-        throw exception();
-    }
-    if( abs(co_VS_sb_VS_bb_equity[1] + co_VS_sb_VS_bb_equity[2] + co_VS_sb_VS_bb_equity[3] - 100) > equity_error ){
-        cout << "-E- co_VS_sb_VS_bb_equity too divergent, total value: " ;
-        cout << co_VS_sb_VS_bb_equity[0] + co_VS_sb_VS_bb_equity[1] + co_VS_sb_VS_bb_equity[2] + co_VS_sb_VS_bb_equity[3] << endl;
-        throw exception();
-    }
-    if( abs(de_VS_sb_VS_bb_equity[1] + de_VS_sb_VS_bb_equity[2] + de_VS_sb_VS_bb_equity[3]-100) > equity_error ){
-        cout << "-E- de_VS_sb_VS_bb_equity too divergent, total value: " ;
-        cout << de_VS_sb_VS_bb_equity[0] + de_VS_sb_VS_bb_equity[1] + de_VS_sb_VS_bb_equity[2] + de_VS_sb_VS_bb_equity[3] << endl;
-        throw exception();
-    }
-    if( abs(co_VS_de_VS_sb_VS_bb_equity[0] + co_VS_de_VS_sb_VS_bb_equity[1] + co_VS_de_VS_sb_VS_bb_equity[2] + co_VS_de_VS_sb_VS_bb_equity[3] - 100) > equity_error ) {
-        cout << "-E- co_VS_de_VS_sb_VS_bb_equity too divergent, total value: " ;
-        cout << co_VS_de_VS_sb_VS_bb_equity[0] + co_VS_de_VS_sb_VS_bb_equity[1] + co_VS_de_VS_sb_VS_bb_equity[2] + co_VS_de_VS_sb_VS_bb_equity[3] << endl;
-        throw exception();
-    }
-
 
     double co_value =
             probability_empty_bigblind                               * 1                                       * 0                   +
@@ -664,7 +887,7 @@ positions_expectancy calc_iteration_value(double AllIn, double Bb, double Sb,
             probability_threeraises_dealer_smallblind_bigblind       * ((0.01) * de_VS_sb_VS_bb_equity[3]       * (3*AllIn)      -AllIn)+
             probability_fourraises_cutoff_dealer_smallblind_bigblind * ((0.01) * co_VS_de_VS_sb_VS_bb_equity[3] * (4*AllIn) -AllIn);
 
-    double value_error = Sb/10;
+    double value_error = (Sb+!Sb)/10;
     if(abs(co_value+de_value+sb_value+bb_value) > value_error){
         cout << "-E- value_error too big, total value: " ;
         cout << co_value + de_value + sb_value + bb_value << endl;
